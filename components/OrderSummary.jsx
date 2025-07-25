@@ -1,17 +1,35 @@
-import { addressDummyData } from "@/assets/assets";
+
+import axios from "axios";
 import { useAppContext } from "@/context/AppContext";
 import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 const OrderSummary = () => {
 
-  const { currency, router, getCartCount, getCartAmount } = useAppContext()
+  const { currency, router, getCartCount, getCartAmount, getToken, user, cartItems, setCartItems } = useAppContext()
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const [userAddresses, setUserAddresses] = useState([]);
 
   const fetchUserAddresses = async () => {
-    setUserAddresses(addressDummyData);
+
+
+    try {
+
+      const token = await getToken()
+      const { data } = await axios.get('/api/user/get-address', { headers: { Authorization: `Bearer ${token}` } })
+      if (data.success) {
+        setUserAddresses(data.addresses)
+        if (data.addresses.length > 0) {
+          setSelectedAddress(data.addresses[0])
+        }
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    }
   }
 
   const handleAddressSelect = (address) => {
@@ -20,12 +38,45 @@ const OrderSummary = () => {
   };
 
   const createOrder = async () => {
+    try {
 
+      if (!selectedAddress) {
+        return toast.error('Please select an address')
+      }
+      let cartItemsArray = Object.keys(cartItems).map((key) => ({ product: key, quantity: cartItems[key] }))
+      cartItemsArray - cartItemsArray.filter(item => item.quantity > 0)
+
+      if (cartItemsArray.length === 0) {
+        return toast.error('Cart is empty')
+      }
+      const token = await getToken()
+
+      const { data } = await axios.post('/api/order/create', {
+        address: selectedAddress._id,
+        items: cartItemsArray
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (data.success) {
+        toast.success(data.message)
+        setCartItems({})
+        router.push('/order-placed')
+      } else {
+        toast.error(data.message)
+      }
+
+    } catch (error) {
+      toast.error(error.message)
+    }
   }
 
   useEffect(() => {
-    fetchUserAddresses();
-  }, [])
+    if (user) {
+      fetchUserAddresses();
+    }
+
+  }, [user])
 
   return (
     <div className="w-full md:w-96 bg-gray-500/5 p-5">
