@@ -4,20 +4,12 @@ import User from "@/models/User";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16", // Always define this to avoid breaking changes
-});
-
-export const config = {
-  api: {
-    bodyParser: false, // ✅ Use correct casing
-  },
-};
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 export async function POST(request) {
   try {
     const body = await request.text();
-    const sig = request.headers.get("stripe-signature");
+    const sig = request.headers.get('stripe-signature')
 
     const event = stripe.webhooks.constructEvent(
       body,
@@ -26,16 +18,11 @@ export async function POST(request) {
     );
 
     const handlePaymentIntent = async (paymentIntentId, isPaid) => {
-      const sessionList = await stripe.checkout.sessions.list({
+      const session = await stripe.checkout.sessions.list({
         payment_intent: paymentIntentId,
       });
 
-      const session = sessionList.data[0];
-      if (!session || !session.metadata) {
-        throw new Error("Session or metadata not found.");
-      }
-
-      const { orderId, userId } = session.metadata;
+      const { orderId, userId } = session.data[0].metadata;
 
       await connectDB();
 
@@ -43,27 +30,33 @@ export async function POST(request) {
         await Order.findByIdAndUpdate(orderId, { isPaid: true });
         await User.findByIdAndUpdate(userId, { cartItems: {} });
       } else {
-        await Order.findByIdAndUpdate(orderId, { isPaid: false });
+        await Order.findByIdAndUpdate(orderId);
       }
     };
 
     switch (event.type) {
-      case "payment_intent.succeeded":
-        await handlePaymentIntent(event.data.object.id, true);
+      case "payment_intent.succeeded": {
+        await handlePaymentIntent(event.data.object.id,true)
         break;
+      }
 
-      case "payment_intent.canceled":
-        await handlePaymentIntent(event.data.object.id, false);
+      case "payment_intent.canceled": {
+        await handlePaymentIntent(event.data.object.id,false)
         break;
+      }
 
       default:
-        console.warn("Unhandled event type:", event.type);
+        console.error(event.type)
         break;
     }
+    return NextResponse.json({received:true})
 
-    return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("Stripe Webhook Error:", error);
-    return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 });
+    console.error(error)
+    return NextResponse.json({message:error.message})
   }
 }
+
+export const config = {
+  api: { bodyparser: false },
+};
