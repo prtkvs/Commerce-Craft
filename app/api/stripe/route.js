@@ -1,5 +1,6 @@
 import connectDB from "@/config/db";
 import Order from "@/models/Order";
+import User from "@/models/User";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
@@ -27,7 +28,7 @@ export async function POST(request) {
 
       if (isPaid) {
         await Order.findByIdAndUpdate(orderId, { isPaid: true });
-        await Order.findByIdAndUpdate(userId, { cartItems: {} });
+        await User.findByIdAndUpdate(userId, { cartItems: {} });
       } else {
         await Order.findByIdAndUpdate(orderId);
       }
@@ -57,5 +58,5 @@ export async function POST(request) {
 }
 
 export const config = {
-  api: { bodyparser: false },
+  api: { bodyParser: false },
 };
