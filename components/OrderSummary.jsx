@@ -70,6 +70,36 @@ const OrderSummary = () => {
       toast.error(error.message)
     }
   }
+  
+  const createOrderStripe = async()=>{
+    try {
+      if (!selectedAddress) {
+        return toast.error('Please select an address')
+      }
+      let cartItemsArray = Object.keys(cartItems).map((key) => ({ product: key, quantity: cartItems[key] }))
+      cartItemsArray - cartItemsArray.filter(item => item.quantity > 0)
+
+      if (cartItemsArray.length === 0) {
+        return toast.error('Cart is empty')
+      }
+      const token = await getToken()
+
+      const { data } = await axios.post('/api/order/stripe', {
+        address: selectedAddress._id,
+        items: cartItemsArray
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if(data.success){
+        window.location.href = data.url
+      } else{
+        toast.error(data.message)
+      }
+    } catch (error) {
+       toast.error(error.message)
+    }
+  }
 
   useEffect(() => {
     if (user) {
@@ -166,7 +196,7 @@ const OrderSummary = () => {
         </div>
       </div>
 
-      <button onClick={createOrder} className="w-full bg-orange-600 text-white py-3 mt-5 hover:bg-orange-700">
+      <button onClick={createOrderStripe} className="w-full bg-orange-600 text-white py-3 mt-5 hover:bg-orange-700">
         Place Order
       </button>
     </div>
