@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'; // Disable edge runtime
+
 import connectDB from "@/config/db";
 import Order from "@/models/Order";
 import User from "@/models/User";
@@ -57,6 +59,6 @@ export async function POST(request) {
   }
 }
 
-export const config = {
-  api: { bodyparser: false }
-}
+// export const config = {
+//   api: { bodyparser: false }
+// }
