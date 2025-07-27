@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import Order from "@/models/Order";
@@ -9,7 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 export async function POST(request) {
   try {
   
-    const { userId } = auth();  
+    const { userId } = getAuth(request);
 
     const { address, items } = await request.json();
     const origin = request.headers.get("origin");

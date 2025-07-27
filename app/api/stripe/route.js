@@ -1,5 +1,3 @@
-export const runtime = 'nodejs'; // Disable edge runtime
-
 import connectDB from "@/config/db";
 import Order from "@/models/Order";
 import User from "@/models/User";
@@ -58,7 +56,6 @@ export async function POST(request) {
     return NextResponse.json({message:error.message})
   }
 }
-
-// export const config = {
-//   api: { bodyparser: false }
-// }
+export const config = {
+  api: { bodyparser: false }
+}
