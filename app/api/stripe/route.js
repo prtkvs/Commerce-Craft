@@ -1,6 +1,3 @@
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
 import connectDB from "@/config/db";
 import Order from "@/models/Order";
 import User from "@/models/User";
@@ -22,7 +19,7 @@ export async function POST(request) {
 
     const handlePaymentIntent = async (paymentIntentId, isPaid) => {
       const session = await stripe.checkout.sessions.list({
-        payment_intent: paymentIntentId,
+        payment_intent: paymentIntentId
       });
 
       const { orderId, userId } = session.data[0].metadata;
@@ -30,12 +27,12 @@ export async function POST(request) {
       await connectDB();
 
       if (isPaid) {
-        await Order.findByIdAndUpdate(orderId, { isPaid: true });
-        await User.findByIdAndUpdate(userId, { cartItems: {} });
+        await Order.findByIdAndUpdate(orderId, { isPaid: true })
+        await User.findByIdAndUpdate(userId, { cartItems: {} })
       } else {
-        await Order.findByIdAndUpdate(orderId);
+        await Order.findByIdAndDelete(orderId);
       }
-    };
+    }
 
     switch (event.type) {
       case "payment_intent.succeeded": {
@@ -61,5 +58,5 @@ export async function POST(request) {
 }
 
 export const config = {
-  api: { bodyparser: false },
-};
+  api: { bodyparser: false }
+}

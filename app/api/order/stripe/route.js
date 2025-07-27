@@ -1,17 +1,14 @@
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import Order from "@/models/Order";
 import Product from "@/models/Product";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 export async function POST(request) {
   try {
-    // Only call getAuth inside function, not at file/module top level
+  
     const { userId } = getAuth(request);
 
     const { address, items } = await request.json();
@@ -22,20 +19,15 @@ export async function POST(request) {
     }
 
     let productData = [];
-    let amount = 0;
-
-    for (const item of items) {
-      const product = await Product.findById(item.product);
-      if (!product) continue;
-
-      productData.push({
-        name: product.name,
-        price: product.offerPrice,
-        quantity: item.quantity,
-      });
-
-      amount += product.offerPrice * item.quantity;
-    }
+      let amount = await items.reduce(async (acc, item) => {
+            const product = await Product.findById(item.product);
+            productData.push({
+                name:product.name,
+                price:product.offerPrice,
+                quantity: item.quantity
+            })
+            return await acc + product.offerPrice * item.quantity;
+        }, 0)
 
     amount += Math.floor(amount * 0.02);
 
@@ -43,21 +35,23 @@ export async function POST(request) {
       userId,
       address,
       items,
-      amount,
+      amount: amount + Math.floor(amount*0.02),
       date: Date.now(),
       paymentType: "Stripe",
     });
 
-    const line_items = productData.map((item) => ({
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: item.name,
-        },
-        unit_amount: item.price * 100,
-      },
-      quantity: item.quantity,
-    }));
+    const line_items = productData.map(item=>{
+        return {
+            price_data:{ 
+                currency: 'usd',
+                product_data:{
+                name:item.name
+                },
+                unit_amount: item.price*100,
+            },
+            quantity : item.quantity
+        }
+        })
 
     const session = await stripe.checkout.sessions.create({
       line_items,
@@ -65,12 +59,12 @@ export async function POST(request) {
       success_url: `${origin}/order-placed`,
       cancel_url: `${origin}/cart`,
       metadata: {
-        orderId: order._id.toString(),
-        userId,
-      },
+        orderId:order._id.toString(),
+        userId
+      }
     });
-
-    return NextResponse.json({ success: true, url: session.url });
+    const url = session.url
+    return NextResponse.json({ success: true, url});
   } catch (error) {
     console.error("Stripe error:", error);
     return NextResponse.json({ success: false, message: error.message });
